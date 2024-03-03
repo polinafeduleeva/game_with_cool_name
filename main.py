@@ -1,93 +1,11 @@
-import os
-import sys
 import pygame
 from random import randint
-
-WINDOW_SIZE = (800, 800)
-FPS = 6
-
+from consts import *
+from characters import *
+from enemies import *
 
 pygame.init()
 screen = pygame.display.set_mode(WINDOW_SIZE)
-
-all_sprites = pygame.sprite.Group()
-characters = pygame.sprite.Group()
-enemies = pygame.sprite.Group()
-
-
-def load_image(name):
-    if not os.path.isfile(name):
-        print(f"Файл с изображением '{name}' не найден")
-        sys.exit()
-    image = pygame.image.load(name)
-    return image
-
-
-class Character(pygame.sprite.Sprite):
-    ''' Класс, на основе которого создаются персонажи
-        path - папка с анимациями персонажа
-        speed - скорость в пикселях в секунду
-        hp - количество сердец здоровья '''
-    def __init__(self, path, weapon, speed=60, hp=5):
-        super().__init__(all_sprites)
-        characters.add(self)
-        self.weapon = weapon
-        self.hp = hp
-        self.speed = speed / FPS
-
-        self.frames = []
-        self.frames = self.cut_sheet(load_image(path + '/walk.png'), 4, 4)
-        self.cur_frame = 1
-        self.cur_rotate = 0
-        self.speed_x = 0
-        self.speed_y = 0
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
-        self.rect = self.rect.move(200, 200)
-
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        frames = []
-        for j in range(columns):
-            frames.append([])
-            for i in range(rows):
-                frame_location = (self.rect.w * j, self.rect.h * i)
-                frames[j].append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-        return frames
-
-    def damage(self, hp):
-        self.hp -= hp
-
-    def update(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == 1073741906:
-                self.speed_x = 0
-                self.speed_y = -self.speed
-                self.cur_rotate = 1
-            if event.key == 1073741905:
-                self.speed_x = 0
-                self.speed_y = self.speed
-                self.cur_rotate = 0
-            if event.key == 1073741904:
-                self.speed_x = -self.speed
-                self.speed_y = 0
-                self.cur_rotate = 3
-            if event.key == 1073741903:
-                self.speed_x = self.speed
-                self.speed_y = 0
-                self.cur_rotate = 2
-        elif event.type == pygame.KEYUP:
-            if 1073741903 <= event.key <= 1073741906:
-                self.speed_x = 0
-                self.speed_y = 0
-                self.cur_frame = 1
-        self.rect.x += self.speed_x
-        self.rect.y += self.speed_y
-        self.weapon.set_coords(self.rect.x + self.rect.width, self.rect.y + 20)
-        if self.speed_x or self.speed_y:
-            self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -172,18 +90,23 @@ class Weapon(pygame.sprite.Sprite):
         self.image = self.frames[self.cur_rotate][self.cur_frame]
 
 
-
-char = Character(path='images/characters/witch', weapon=Weapon('images/weapons/13fire_book.png', 'images/bullets/13fire.png'))
+char = Witch(weapon=Weapon('images/weapons/13fire_book.png', 'images/bullets/13fire.png'))
+skelet = Enemy(path='images/enemies/skeleton')
 
 clock = pygame.time.Clock()
 running = True
-
+do_loop = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        do_loop = False
         all_sprites.update(event)
-    all_sprites.update(event)
+    if do_loop:
+        all_sprites.update(event)
+    do_loop = True
+    for elem in enemies:
+        elem.set_char_coords((char.rect.x, char.rect.y))
     screen.fill((255, 255, 255))
     all_sprites.draw(screen)
     pygame.display.flip()
