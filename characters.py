@@ -1,6 +1,50 @@
 import pygame
-from API import *
-from consts import *
+from init import *
+
+
+class Heart(pygame.sprite.Sprite):
+    def __init__(self, coords):
+        super().__init__(all_sprites, characters)
+        path = 'images/characters/13hearts.png'
+        self.frames = self.cut_sheet(load_image(path),
+                                     int(path.split('/')[-1][0]), int(path.split('/')[-1][1]))
+
+        self.image = self.frames[0][0]
+        self.rect = self.rect.move(*coords)
+
+    def set_size(self, size):
+        if size >= 1:
+            self.image = self.frames[0][0]
+        elif size == 0.5:
+            self.image = self.frames[0][1]
+        else:
+            self.image = self.frames[0][2]
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        frames = []
+        for j in range(columns):
+            frames.append([])
+            for i in range(rows):
+                frame_location = (self.rect.w * j, self.rect.h * i)
+                frames[j].append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+        return frames
+
+
+class Info:
+    def __init__(self, hp):
+        self.hp = hp
+        self.hearts = []
+        for i in range(hp):
+            self.hearts.append(Heart(coords=(i * 35, 0)))
+
+    def set_hp(self, hp):
+        self.hp = hp
+        for i in range(len(self.hearts)):
+            self.hearts[i].set_size(self.hp - i)
+
 
 
 class Character(pygame.sprite.Sprite):
@@ -14,6 +58,7 @@ class Character(pygame.sprite.Sprite):
         self.hp = hp
         self.speed = speed / FPS
 
+        self.inf = Info(hp)
         self.frames = []
         self.frames = self.cut_sheet(load_image(path + '/walk.png'), 4, 4)
         self.cur_frame = 1
@@ -37,6 +82,7 @@ class Character(pygame.sprite.Sprite):
 
     def damage(self, hp):
         self.hp -= hp
+        self.inf.set_hp(self.hp)
 
     def update(self, event):
         if event.type == pygame.KEYDOWN:

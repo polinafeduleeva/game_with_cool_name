@@ -1,97 +1,41 @@
 import pygame
 from random import randint
-from consts import *
+from init import *
 from characters import *
 from enemies import *
+from weapons import *
 
 pygame.init()
 screen = pygame.display.set_mode(WINDOW_SIZE)
+tile_images = {'floor': load_image('images/fields/floor.png')}
+tile_width = tile_height = 96
 
 
-class Bullet(pygame.sprite.Sprite):
-    '''Класс для создания пуль
-        path - анимация пули
-        speed - скорость по x и y
-        coords - начальные координаты
-        good - при False калечит персонажей, иначе - врагов'''
-    def __init__(self, path, damage=1, speed=(60, 60), coords=(0, 0), good=False):
+def make_room(filename):
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+    max_width = max(map(len, level_map))
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+
+
+class Pixel(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(all_sprites)
-        self.damage = damage
-        self.good = good
-        self.speed = [speed[0] / FPS, speed[1] / FPS]
-
-        self.frames = self.cut_sheet(load_image(path), int(path.split('/')[-1][0]), int(path.split('/')[-1][1]))
-        self.cur_frame = 0
-        self.cur_rotate = 0
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
-        self.rect = self.rect.move(*coords)
-
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        frames = []
-        for j in range(columns):
-            frames.append([])
-            for i in range(rows):
-                frame_location = (self.rect.w * j, self.rect.h * i)
-                frames[j].append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-        return frames
-
-    def update(self, event):
-        if self.good:
-            collid = pygame.sprite.spritecollide(self, enemies, dokill=False)
-        else:
-            collid = pygame.sprite.spritecollide(self, characters, dokill=False)
-        if collid:
-            collid[0].damage(self.damage)
-            self.kill()
-        self.rect.x += self.speed[0]
-        self.rect.y += self.speed[1]
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
 
 
-class Weapon(pygame.sprite.Sprite):
-    def __init__(self, path, bullet_path, coords=(0, 0), err=20):
-        super().__init__(all_sprites)
-        self.frames = self.cut_sheet(load_image(path), int(path.split('/')[-1][0]), int(path.split('/')[-1][1]))
-        self.err = err
-        self.cur_frame = 0
-        self.cur_rotate = 0
-        self.bullet_path = bullet_path
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
-        self.rect = self.rect.move(*coords)
+def generate_room(filename):
+    level = make_room(filename)
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '*':
+                Pixel('floor', x, y)
 
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        frames = []
-        for j in range(columns):
-            frames.append([])
-            for i in range(rows):
-                frame_location = (self.rect.w * j, self.rect.h * i)
-                frames[j].append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-        return frames
-
-    def set_coords(self, x, y):
-        self.rect.x = x
-        self.rect.y = y
-
-    def shoot(self, speed):
-        Bullet(self.bullet_path, coords=(self.rect.x + self.rect.width - 5, self.rect.y), speed=speed, good=True)
-
-    def update(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == 120:
-                self.shoot((60 + randint(-self.err, self.err), 60 + randint(-self.err, self.err)))
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
-
-
+generate_room('rooms/1')
 char = Witch(weapon=Weapon('images/weapons/13fire_book.png', 'images/bullets/13fire.png'))
-skelet = Enemy(path='images/enemies/skeleton')
+skelet = SkeletonSwordman()
 
 clock = pygame.time.Clock()
 running = True
@@ -107,7 +51,7 @@ while running:
     do_loop = True
     for elem in enemies:
         elem.set_char_coords((char.rect.x, char.rect.y))
-    screen.fill((255, 255, 255))
+    screen.fill((0, 0, 0))
     all_sprites.draw(screen)
     pygame.display.flip()
     clock.tick(FPS)

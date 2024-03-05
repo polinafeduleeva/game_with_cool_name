@@ -2,6 +2,8 @@ import os
 import sys
 import pygame
 
+WINDOW_SIZE = (800, 700)
+FPS = 6
 all_sprites = pygame.sprite.Group()
 characters = pygame.sprite.Group()
 enemies = pygame.sprite.Group()
