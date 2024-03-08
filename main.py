@@ -1,5 +1,5 @@
 import pygame
-from random import randint
+from random import choice
 from init import *
 from characters import *
 from enemies import *
@@ -7,13 +7,16 @@ from weapons import *
 
 pygame.init()
 screen = pygame.display.set_mode(WINDOW_SIZE)
-tile_images = {'floor': load_image('images/fields/floor.png')}
-tile_width = tile_height = 96
+tile_images = {'floor': [load_image('images/fields/floor1.png'), load_image('images/fields/floor2.png'),
+                         load_image('images/fields/floor3.png'), load_image('images/fields/floor4.png'),
+                         load_image('images/fields/floor5.png')],
+               'wall': [load_image('images/fields/wall.png')]}
+tile_width = tile_height = 30
 
 
 def make_room(filename):
     with open(filename, 'r') as mapFile:
-        level_map = [line.strip() for line in mapFile]
+        level_map = [line for line in mapFile]
     max_width = max(map(len, level_map))
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
@@ -21,9 +24,10 @@ def make_room(filename):
 class Pixel(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(all_sprites)
-        self.image = tile_images[tile_type]
-        self.rect = self.image.get_rect().move(
-            tile_width * pos_x, tile_height * pos_y)
+        self.image = choice(tile_images[tile_type])
+        self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
+        if tile_type == 'wall':
+            obstacles.add(self)
 
 
 def generate_room(filename):
@@ -32,6 +36,9 @@ def generate_room(filename):
         for x in range(len(level[y])):
             if level[y][x] == '*':
                 Pixel('floor', x, y)
+            if level[y][x] == 'X':
+                Pixel('wall', x, y)
+
 
 generate_room('rooms/1')
 char = Witch(weapon=Weapon('images/weapons/13fire_book.png', 'images/bullets/13fire.png'))

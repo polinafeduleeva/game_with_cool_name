@@ -1,10 +1,11 @@
 import pygame
 from init import *
+from enemies import *
 
 
 class Heart(pygame.sprite.Sprite):
     def __init__(self, coords):
-        super().__init__(all_sprites, characters)
+        super().__init__(all_sprites)
         path = 'images/characters/13hearts.png'
         self.frames = self.cut_sheet(load_image(path),
                                      int(path.split('/')[-1][0]), int(path.split('/')[-1][1]))
@@ -44,7 +45,6 @@ class Info:
         self.hp = hp
         for i in range(len(self.hearts)):
             self.hearts[i].set_size(self.hp - i)
-
 
 
 class Character(pygame.sprite.Sprite):
@@ -102,6 +102,15 @@ class Character(pygame.sprite.Sprite):
                 self.speed_x = self.speed
                 self.speed_y = 0
                 self.cur_rotate = 2
+            if event.key == 120:
+                enemy = (10000, 100000)
+                for elem in list(enemies):
+                    if abs(elem.rect.x - self.rect.x) + abs(elem.rect.y - self.rect.y) < abs(enemy[0]) + abs(enemy[1]) :
+                        enemy = (elem.rect.x - self.rect.x, elem.rect.y - self.rect.y)
+                self.weapon.shoot(enemy)
+            # для теста
+            if event.key == 122:
+                skelet = SkeletonSwordman()
         elif event.type == pygame.KEYUP:
             if 1073741903 <= event.key <= 1073741906:
                 self.speed_x = 0
