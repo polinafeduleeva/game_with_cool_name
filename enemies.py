@@ -10,7 +10,7 @@ class Enemy(pygame.sprite.Sprite):
         speed - скорость в пикселях в секунду
         hp - количество сердец здоровья '''
     def __init__(self, path, bullet, bullet_coords, char_coords=(0, 0), speed=40, hp=5, coords=(0, 0), attack_range=20,
-                 cd=2):
+                 cd=2, atk_type=0):
         super().__init__(all_sprites, enemies)
         self.hp = hp
         self.speed = speed / FPS
@@ -21,6 +21,7 @@ class Enemy(pygame.sprite.Sprite):
         self.cd = cd
         self.timer = time()
         self.state = 'walk'
+        self.type = atk_type
 
         self.walk_frames = self.cut_sheet(load_image(path + '/walk.png'), 4, 4)
         self.attack_frames = self.cut_sheet(load_image(path + '/attack.png'), 4, 4)
@@ -48,7 +49,7 @@ class Enemy(pygame.sprite.Sprite):
     def damage(self, hp):
         self.hp -= hp
         if self.hp <= 0:
-            self.state = 'dead'
+            self.set_state('dead')
             self.cur_frame = 0
 
     def set_char_coords(self, coords):
@@ -59,9 +60,9 @@ class Enemy(pygame.sprite.Sprite):
 
     def set_speed(self):
         x, y = self.char_coords[0] - self.rect.x, self.char_coords[1] - self.rect.y
-        if -self.attack_range - CHAR_SIZE[0] < x < self.attack_range + CHAR_SIZE[0] and -CHAR_SIZE[1] < y < 0:
-            if time() - self.timer >= self.cd:
-                self.attack()
+        if -self.attack_range - CHAR_SIZE[0] < x < self.attack_range + CHAR_SIZE[0] \
+                and (self.type or -CHAR_SIZE[1] < y < 0) and time() - self.timer >= self.cd:
+            self.attack()
         else:
             if x or y:
                 if max(abs(x), abs(y)) == abs(x):
@@ -75,14 +76,28 @@ class Enemy(pygame.sprite.Sprite):
                 if y < 0:
                     self.speed_y *= -1
 
+    def set_state(self, state):
+        self.state = state
+
     def attack(self):
         self.timer = time()
         self.speed_x = 0
         self.speed_y = 0
         self.cur_frame = 0
-        self.state = 'attack'
+        self.set_state('attack')
+
+    def shoot(self, coords=(0, 0), speed=(0, 0)):
+        bull = Bullet(self.bullet, damage=0.5, speed=speed, coords=(self.rect.x + coords[0], self.rect.y + coords[1]),
+                      good=False, suicide=not self.type)
+        return bull
 
     def update(self, event):
+        collid = pygame.sprite.spritecollide(self, enemies, dokill=False)
+        collid.remove(self)
+        if pygame.sprite.spritecollide(self, obstacles, dokill=False) or \
+                pygame.sprite.spritecollide(self, characters, dokill=False) or collid:
+            self.rect.x -= self.speed_x
+            self.rect.y -= self.speed_y
         if self.state == 'dead':
             if self.cur_frame + 1 >= len(self.dead_frames[0]):
                 self.kill()
@@ -90,7 +105,7 @@ class Enemy(pygame.sprite.Sprite):
             self.image = self.dead_frames[self.cur_rotate][min(self.cur_frame, 3)]
         elif self.state == 'attack':
             if self.cur_frame + 1 >= len(self.attack_frames[0]):
-                self.state = 'walk'
+                self.set_state('walk')
                 self.speed_x = randint(-int(self.speed), int(self.speed))
                 self.speed_y = randint(-int(self.speed), int(self.speed))
             self.cur_frame = (self.cur_frame + 1) % len(self.attack_frames[0])
@@ -123,6 +138,10 @@ class SkeletonSwordman(Enemy):
         super().__init__(path='images/enemies/skeleton', bullet='images/bullets/24sword_attack.png', cd=4,
                          bullet_coords=(10, 10), coords=coords, speed=40)
 
+    def shoot(self, coords=(0, 0), speed=(0, 0)):
+        bull = super().shoot(coords, speed)
+        bull.cur_rotate = int(self.cur_rotate == 3)
+
     def attack(self):
         super().attack()
         if self.char_coords[0] + (CHAR_SIZE[0] / 2) <= self.rect.x:
@@ -131,5 +150,31 @@ class SkeletonSwordman(Enemy):
         else:
             self.cur_rotate = 2
             coords = (self.rect.x + self.bullet_coords[0] + self.rect.width - 10, self.rect.y + self.bullet_coords[1])
-        bull = Bullet(self.bullet, damage=0.5, speed=(0, 0), coords=coords, good=False, suicide=True)
-        bull.cur_rotate = int(self.cur_rotate == 3)
+        self.shoot(coords=coords)
+
+
+class Slime(Enemy):
+    def __init__(self, coords=(0, 0)):
+        super().__init__(path='images/enemies/slime', bullet='images/bullets/11slime_bullet.png', cd=4, hp=3,
+                         bullet_coords=(10, 10), coords=coords, speed=40, attack_range=800, atk_type=1)
+
+    def attack(self):
+        super().attack()
+
+    def set_state(self, state):
+        if self.state == 'attack' and state == 'walk':
+            speed = [0, 0]
+            x, y = self.char_coords[0] - self.rect.x, self.char_coords[1] - self.rect.y
+            if x or y:
+                if max(abs(x), abs(y)) == abs(x):
+                    speed[0] = 30
+                    speed[1] = abs((y / x) * 30)
+                else:
+                    speed[1] = 30
+                    speed[0] = abs((x / y) * 30)
+                if x < 0:
+                    speed[0] *= -1
+                if y < 0:
+                    speed[1] *= -1
+            self.shoot(speed=speed, coords=(30, 30))
+        super().set_state(state)

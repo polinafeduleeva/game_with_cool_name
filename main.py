@@ -5,13 +5,13 @@ from characters import *
 from enemies import *
 from weapons import *
 
+
 pygame.init()
 screen = pygame.display.set_mode(WINDOW_SIZE)
-tile_images = {'floor': [load_image('images/fields/floor1.png'), load_image('images/fields/floor2.png'),
-                         load_image('images/fields/floor3.png'), load_image('images/fields/floor4.png'),
-                         load_image('images/fields/floor5.png')],
-               'wall': [load_image('images/fields/wall.png')]}
 tile_width = tile_height = 30
+underground_enemies = [SkeletonSwordman, Slime]
+level_map = {1: {'map': 'rooms/start_room', 'type': 'start', 'new': True, 1: None, 2: 2, 3: None, 4: None},
+             2: {'map': 'rooms/battlefields/1', 'type': 'battlefield', 'new': True, 1: None, 2: None, 3: None, 4: 1}}
 
 
 def make_room(filename):
@@ -22,27 +22,96 @@ def make_room(filename):
 
 
 class Pixel(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y):
+    def __init__(self, tile_type, pos_x, pos_y, tp=None):
         super().__init__(all_sprites)
-        self.image = choice(tile_images[tile_type])
+        self.image = choice(underground_images[tile_type])
         self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
-        if tile_type == 'wall':
+        self.type = tile_type
+        self.tp = tp
+        if self.type == 'wall' or self.type == 'door':
             obstacles.add(self)
 
+    def open(self):
+        if self.type == 'door':
+            self.type = 'door_open'
+            obstacles.remove(self)
+            teleports.add(self)
+            self.image = underground_images['door_open'][0]
 
-def generate_room(filename):
-    level = make_room(filename)
-    for y in range(len(level)):
-        for x in range(len(level[y])):
-            if level[y][x] == '*':
-                Pixel('floor', x, y)
-            if level[y][x] == 'X':
-                Pixel('wall', x, y)
+    def close(self):
+        if self.type == 'door_open':
+            self.type = 'door'
+            self.image = underground_images['door'][0]
+            obstacles.add(self)
+            teleports.remove(self)
+
+    def __repr__(self):
+        return self.type
 
 
-generate_room('rooms/1')
+class Room:
+    def __init__(self, name):
+        self.name = name
+        self.char_coords = (0, 0)
+        self.field = self.generate_room(level_map[name]['map'])
+        if level_map[name]['type'] == 'battlefield' and level_map[name]['new']:
+            for i in range(5):
+                choice(underground_enemies)(coords=(randint(200, len(self.field[0]) * tile_width - 200),
+                                                    randint(200, len(self.field) * tile_height) - 200))
+        for y in range(len(self.field)):
+            for x in range(len(self.field[y])):
+                all_sprites.move_to_back(self.field[y][x])
+
+    def generate_room(self, filename):
+        level = make_room(filename)
+        field = []
+        for y in range(len(level)):
+            field.append([])
+            for x in range(len(level[y])):
+                if level[y][x] == '*':
+                    field[y].append(Pixel('floor', x, y))
+                if level[y][x] == 'X':
+                    field[y].append(Pixel('wall', x, y))
+                if level[y][x] == 'C':
+                    field[y].append(Pixel('floor', x, y))
+                    self.char_coords = (x * tile_width, y * tile_height)
+                if level[y][x] == '1' or level[y][x] == '2' or level[y][x] == '3' or level[y][x] == '4':
+                    field[y].append(Pixel('door', x, y, level_map[self.name][int(level[y][x])]))
+        return field
+
+    def open(self):
+        for y in range(len(self.field)):
+            for x in range(len(self.field[y])):
+                self.field[y][x].open()
+
+    def close(self):
+        for y in range(len(self.field)):
+            for x in range(len(self.field[0])):
+                self.field[y][x].close()
+
+    def remove(self):
+        for y in range(len(self.field)):
+            for x in range(len(self.field[y])):
+                self.field[y][x].kill()
+
+
+class Camera:
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - WINDOW_SIZE[0] // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - WINDOW_SIZE[1] // 2)
+
+
+room = Room(1)
+camera = Camera()
 char = Witch(weapon=Weapon('images/weapons/13fire_book.png', 'images/bullets/13fire.png'))
-skelet = SkeletonSwordman()
 
 clock = pygame.time.Clock()
 running = True
@@ -53,13 +122,27 @@ while running:
             running = False
         do_loop = False
         all_sprites.update(event)
+        info.update(event)
+    screen.fill((0, 0, 0))
+    if len(list(enemies)) == 0:
+        room.open()
     if do_loop:
         all_sprites.update(event)
     do_loop = True
     for elem in enemies:
         elem.set_char_coords((char.rect.x, char.rect.y))
-    screen.fill((0, 0, 0))
+    for sprite in all_sprites:
+        camera.apply(sprite)
+
+    collid = pygame.sprite.spritecollide(char, teleports, dokill=False)
+    if collid:
+        level_map[room.name]['new'] = False
+        room.remove()
+        room = Room(collid[0].tp)
+        char.move(room.char_coords)
+    camera.update(char)
     all_sprites.draw(screen)
+    info.draw(screen)
     pygame.display.flip()
     clock.tick(FPS)
 pygame.quit()

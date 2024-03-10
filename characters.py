@@ -5,7 +5,7 @@ from enemies import *
 
 class Heart(pygame.sprite.Sprite):
     def __init__(self, coords):
-        super().__init__(all_sprites)
+        super().__init__(info)
         path = 'images/characters/13hearts.png'
         self.frames = self.cut_sheet(load_image(path),
                                      int(path.split('/')[-1][0]), int(path.split('/')[-1][1]))
@@ -84,6 +84,9 @@ class Character(pygame.sprite.Sprite):
         self.hp -= hp
         self.inf.set_hp(self.hp)
 
+    def move(self, coords):
+        self.rect.x, self.rect.y = coords
+
     def update(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == 1073741906:
@@ -110,16 +113,18 @@ class Character(pygame.sprite.Sprite):
                 self.weapon.shoot(enemy)
             # для теста
             if event.key == 122:
-                skelet = SkeletonSwordman()
+                Slime()
         elif event.type == pygame.KEYUP:
             if 1073741903 <= event.key <= 1073741906:
                 self.speed_x = 0
                 self.speed_y = 0
                 self.cur_frame = 1
-        if 0 <= self.rect.x + self.speed_x <= WINDOW_SIZE[0] - self.rect.width:
-            self.rect.x += self.speed_x
-        if 0 <= self.rect.y + self.speed_y <= WINDOW_SIZE[1]:
-            self.rect.y += self.speed_y
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+        if pygame.sprite.spritecollide(self, obstacles, dokill=False) or \
+                pygame.sprite.spritecollide(self, enemies, dokill=False):
+            self.rect.x -= self.speed_x
+            self.rect.y -= self.speed_y
         self.weapon.set_coords(self.rect.x + self.rect.width, self.rect.y + 20)
         if self.speed_x or self.speed_y:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])

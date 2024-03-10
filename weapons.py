@@ -50,9 +50,9 @@ class Bullet(pygame.sprite.Sprite):
                 self.kill()
         self.rect.x += self.speed[0]
         self.rect.y += self.speed[1]
-        if self.suicide and self.cur_frame + 1 >= len(self.frames[0]):
+        if self.suicide and self.cur_frame + 1 >= len(self.frames[self.cur_rotate]):
             self.kill()
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames[self.cur_rotate])
         self.image = self.frames[self.cur_rotate][self.cur_frame]
 
 
