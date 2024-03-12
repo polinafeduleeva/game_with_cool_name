@@ -52,11 +52,12 @@ class Character(pygame.sprite.Sprite):
         path - папка с анимациями персонажа
         speed - скорость в пикселях в секунду
         hp - количество сердец здоровья '''
-    def __init__(self, path, weapon, speed=60, hp=5):
+    def __init__(self, path, weapon, speed=80, hp=5):
         super().__init__(all_sprites, characters)
         self.weapon = weapon
         self.hp = hp
         self.speed = speed / FPS
+        self.count = 0
 
         self.inf = Info(hp)
         self.frames = []
@@ -87,7 +88,15 @@ class Character(pygame.sprite.Sprite):
     def move(self, coords):
         self.rect.x, self.rect.y = coords
 
+    def walk(self):
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+        if pygame.sprite.spritecollide(self, obstacles, dokill=False):
+            self.rect.x -= self.speed_x
+            self.rect.y -= self.speed_y
+
     def update(self, event):
+        self.count += 1
         if event.type == pygame.KEYDOWN:
             if event.key == 1073741906:
                 self.speed_x = 0
@@ -119,16 +128,12 @@ class Character(pygame.sprite.Sprite):
                 self.speed_x = 0
                 self.speed_y = 0
                 self.cur_frame = 1
-        self.rect.x += self.speed_x
-        self.rect.y += self.speed_y
-        if pygame.sprite.spritecollide(self, obstacles, dokill=False) or \
-                pygame.sprite.spritecollide(self, enemies, dokill=False):
-            self.rect.x -= self.speed_x
-            self.rect.y -= self.speed_y
         self.weapon.set_coords(self.rect.x + self.rect.width, self.rect.y + 20)
-        if self.speed_x or self.speed_y:
-            self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
+        if self.count >= FPS // ANIM_FPS:
+            self.count = 0
+            if self.speed_x or self.speed_y:
+                self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
+            self.image = self.frames[self.cur_rotate][self.cur_frame]
 
 
 class Witch(Character):

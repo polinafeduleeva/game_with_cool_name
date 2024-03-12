@@ -17,6 +17,7 @@ class Bullet(pygame.sprite.Sprite):
         self.speed = [speed[0] / FPS, speed[1] / FPS]
         self.suicide = suicide
         self.atk = False
+        self.count = 0
 
         self.frames = self.cut_sheet(load_image(path), int(path.split('/')[-1][0]), int(path.split('/')[-1][1]))
         self.cur_frame = 0
@@ -37,6 +38,7 @@ class Bullet(pygame.sprite.Sprite):
         return frames
 
     def update(self, event):
+        self.count += 1
         if pygame.sprite.spritecollide(self, obstacles, dokill=False):
             self.kill()
         if self.good:
@@ -52,8 +54,10 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.y += self.speed[1]
         if self.suicide and self.cur_frame + 1 >= len(self.frames[self.cur_rotate]):
             self.kill()
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames[self.cur_rotate])
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
+        if self.count >= FPS // ANIM_FPS:
+            self.count = 0
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames[self.cur_rotate])
+            self.image = self.frames[self.cur_rotate][self.cur_frame]
 
 
 class Weapon(pygame.sprite.Sprite):
@@ -63,6 +67,7 @@ class Weapon(pygame.sprite.Sprite):
         self.err = err
         self.timer = time()
         self.speed = speed
+        self.count = 0
         self.cd = cd
         self.bull = None
         self.cur_frame = 0
@@ -113,5 +118,13 @@ class Weapon(pygame.sprite.Sprite):
                                good=True)
 
     def update(self, event):
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
-        self.image = self.frames[self.cur_rotate][self.cur_frame]
+        self.count += 1
+        if self.count >= FPS // ANIM_FPS:
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
+            self.image = self.frames[self.cur_rotate][self.cur_frame]
+            self.count = 0
+
+
+class FireBook(Weapon):
+    def __init__(self):
+        super().__init__('images/weapons/13fire_book.png', 'images/bullets/13fire.png', cd=0.5, err=20, speed=60)

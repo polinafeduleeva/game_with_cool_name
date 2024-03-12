@@ -4,7 +4,8 @@ import pygame
 
 WINDOW_SIZE = (780, 690)
 CHAR_SIZE = (50, 150)
-FPS = 6
+FPS = 12
+ANIM_FPS = 6
 
 all_sprites = pygame.sprite.LayeredUpdates()
 info = pygame.sprite.Group()

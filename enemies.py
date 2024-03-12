@@ -19,13 +19,15 @@ class Enemy(pygame.sprite.Sprite):
         self.bullet_coords = bullet_coords
         self.attack_range = attack_range
         self.cd = cd
-        self.timer = time()
+        self.timer = time() - randint(0, cd)
         self.state = 'walk'
         self.type = atk_type
+        self.count = 0
 
         self.walk_frames = self.cut_sheet(load_image(path + '/walk.png'), 4, 4)
         self.attack_frames = self.cut_sheet(load_image(path + '/attack.png'), 4, 4)
         self.dead_frames = self.cut_sheet(load_image(path + '/dead.png'), 4, 4)
+        self.damage_frames = self.cut_sheet(load_image(path + '/damage.png'), 4, 3)
         self.cur_frame = 1
         self.cur_rotate = 0
         self.speed_x = 0
@@ -50,6 +52,9 @@ class Enemy(pygame.sprite.Sprite):
         self.hp -= hp
         if self.hp <= 0:
             self.set_state('dead')
+            self.cur_frame = 0
+        else:
+            self.state = 'damage'
             self.cur_frame = 0
 
     def set_char_coords(self, coords):
@@ -92,24 +97,34 @@ class Enemy(pygame.sprite.Sprite):
         return bull
 
     def update(self, event):
-        collid = pygame.sprite.spritecollide(self, enemies, dokill=False)
-        collid.remove(self)
+        self.count += 1
         if pygame.sprite.spritecollide(self, obstacles, dokill=False) or \
-                pygame.sprite.spritecollide(self, characters, dokill=False) or collid:
+                pygame.sprite.spritecollide(self, characters, dokill=False):
             self.rect.x -= self.speed_x
             self.rect.y -= self.speed_y
         if self.state == 'dead':
             if self.cur_frame + 1 >= len(self.dead_frames[0]):
                 self.kill()
-            self.cur_frame = self.cur_frame + 1
-            self.image = self.dead_frames[self.cur_rotate][min(self.cur_frame, 3)]
+            if self.count >= FPS // ANIM_FPS:
+                self.count = 0
+                self.cur_frame = self.cur_frame + 1
+                self.image = self.dead_frames[self.cur_rotate][min(self.cur_frame, 3)]
+        if self.state == 'damage':
+            if self.cur_frame + 1 >= len(self.damage_frames[0]):
+                self.set_state('walk')
+            elif self.count >= FPS // ANIM_FPS:
+                self.count = 0
+                self.cur_frame = self.cur_frame + 1
+                self.image = self.damage_frames[self.cur_rotate][self.cur_frame]
         elif self.state == 'attack':
             if self.cur_frame + 1 >= len(self.attack_frames[0]):
                 self.set_state('walk')
                 self.speed_x = randint(-int(self.speed), int(self.speed))
                 self.speed_y = randint(-int(self.speed), int(self.speed))
-            self.cur_frame = (self.cur_frame + 1) % len(self.attack_frames[0])
-            self.image = self.attack_frames[self.cur_rotate][self.cur_frame]
+            if self.count >= FPS // ANIM_FPS:
+                self.count = 0
+                self.cur_frame = (self.cur_frame + 1) % len(self.attack_frames[0])
+                self.image = self.attack_frames[self.cur_rotate][self.cur_frame]
         elif self.state == 'walk':
             self.set_speed()
             if self.speed_y or self.speed_x:
@@ -123,20 +138,21 @@ class Enemy(pygame.sprite.Sprite):
                         self.cur_rotate = 2
                     else:
                         self.cur_rotate = 3
-            if 0 <= self.rect.x + self.speed_x <= WINDOW_SIZE[0] - self.rect.width:
-                self.rect.x += self.speed_x
-            if 0 <= self.rect.y + self.speed_y <= WINDOW_SIZE[1]:
-                self.rect.y += self.speed_y
-            if self.speed_x or self.speed_y:
-                self.cur_frame = (self.cur_frame + 1) % len(self.walk_frames[0])
-            self.image = self.walk_frames[self.cur_rotate][self.cur_frame]
-            self.mask = pygame.mask.from_surface(self.image)
+            if self.count >= FPS // ANIM_FPS:
+                self.count = 0
+                if 0 <= self.rect.x + self.speed_x <= WINDOW_SIZE[0] - self.rect.width:
+                    self.rect.x += self.speed_x
+                if 0 <= self.rect.y + self.speed_y <= WINDOW_SIZE[1]:
+                    self.rect.y += self.speed_y
+                if self.speed_x or self.speed_y:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.walk_frames[0])
+                self.image = self.walk_frames[self.cur_rotate][self.cur_frame]
 
 
 class SkeletonSwordman(Enemy):
     def __init__(self, coords=(0, 0)):
         super().__init__(path='images/enemies/skeleton', bullet='images/bullets/24sword_attack.png', cd=4,
-                         bullet_coords=(10, 10), coords=coords, speed=40)
+                         bullet_coords=(10, 10), coords=coords, speed=60)
 
     def shoot(self, coords=(0, 0), speed=(0, 0)):
         bull = super().shoot(coords, speed)
@@ -146,20 +162,17 @@ class SkeletonSwordman(Enemy):
         super().attack()
         if self.char_coords[0] + (CHAR_SIZE[0] / 2) <= self.rect.x:
             self.cur_rotate = 3
-            coords = (self.rect.x + self.bullet_coords[0], self.rect.y + self.bullet_coords[1])
+            coords = (self.bullet_coords[0], self.bullet_coords[1])
         else:
             self.cur_rotate = 2
-            coords = (self.rect.x + self.bullet_coords[0] + self.rect.width - 10, self.rect.y + self.bullet_coords[1])
+            coords = (self.bullet_coords[0] + self.rect.width - 10, self.bullet_coords[1])
         self.shoot(coords=coords)
 
 
 class Slime(Enemy):
     def __init__(self, coords=(0, 0)):
-        super().__init__(path='images/enemies/slime', bullet='images/bullets/11slime_bullet.png', cd=4, hp=3,
+        super().__init__(path='images/enemies/slime', bullet='images/bullets/11slime_bullet.png', cd=3, hp=3,
                          bullet_coords=(10, 10), coords=coords, speed=40, attack_range=800, atk_type=1)
-
-    def attack(self):
-        super().attack()
 
     def set_state(self, state):
         if self.state == 'attack' and state == 'walk':
@@ -176,5 +189,5 @@ class Slime(Enemy):
                     speed[0] *= -1
                 if y < 0:
                     speed[1] *= -1
-            self.shoot(speed=speed, coords=(30, 30))
+            self.shoot(speed=speed, coords=(60 + randint(-10, 10), 30 + randint(-10, 10)))
         super().set_state(state)

@@ -10,8 +10,8 @@ pygame.init()
 screen = pygame.display.set_mode(WINDOW_SIZE)
 tile_width = tile_height = 30
 underground_enemies = [SkeletonSwordman, Slime]
-level_map = {1: {'map': 'rooms/start_room', 'type': 'start', 'new': True, 1: None, 2: 2, 3: None, 4: None},
-             2: {'map': 'rooms/battlefields/1', 'type': 'battlefield', 'new': True, 1: None, 2: None, 3: None, 4: 1}}
+level_map = {1: {'map': 'rooms/start_room', 'type': 'start', 'chest': False, 'new': True, 1: None, 2: 2, 3: None, 4: None},
+             2: {'map': 'rooms/battlefields/1', 'type': 'battlefield', 'chest': True, 'new': True, 1: None, 2: None, 3: None, 4: 1}}
 
 
 def make_room(filename):
@@ -111,7 +111,7 @@ class Camera:
 
 room = Room(1)
 camera = Camera()
-char = Witch(weapon=Weapon('images/weapons/13fire_book.png', 'images/bullets/13fire.png'))
+char = Witch(weapon=FireBook())
 
 clock = pygame.time.Clock()
 running = True
@@ -131,8 +131,6 @@ while running:
     do_loop = True
     for elem in enemies:
         elem.set_char_coords((char.rect.x, char.rect.y))
-    for sprite in all_sprites:
-        camera.apply(sprite)
 
     collid = pygame.sprite.spritecollide(char, teleports, dokill=False)
     if collid:
@@ -140,7 +138,10 @@ while running:
         room.remove()
         room = Room(collid[0].tp)
         char.move(room.char_coords)
+    for sprite in all_sprites:
+        camera.apply(sprite)
     camera.update(char)
+    char.walk()
     all_sprites.draw(screen)
     info.draw(screen)
     pygame.display.flip()
