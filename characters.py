@@ -58,6 +58,7 @@ class Character(pygame.sprite.Sprite):
         self.hp = hp
         self.speed = speed / FPS
         self.count = 0
+        self.run_coeff = 1
 
         self.inf = Info(hp)
         self.frames = []
@@ -100,34 +101,46 @@ class Character(pygame.sprite.Sprite):
         if event.type == pygame.KEYDOWN:
             if event.key == 1073741906:
                 self.speed_x = 0
-                self.speed_y = -self.speed
+                self.speed_y = -self.speed * self.run_coeff
                 self.cur_rotate = 1
             if event.key == 1073741905:
                 self.speed_x = 0
-                self.speed_y = self.speed
+                self.speed_y = self.speed * self.run_coeff
                 self.cur_rotate = 0
             if event.key == 1073741904:
-                self.speed_x = -self.speed
+                self.speed_x = -self.speed * self.run_coeff
                 self.speed_y = 0
                 self.cur_rotate = 3
             if event.key == 1073741903:
-                self.speed_x = self.speed
+                self.speed_x = self.speed * self.run_coeff
                 self.speed_y = 0
                 self.cur_rotate = 2
             if event.key == 120:
-                enemy = (10000, 100000)
-                for elem in list(enemies):
-                    if abs(elem.rect.x - self.rect.x) + abs(elem.rect.y - self.rect.y) < abs(enemy[0]) + abs(enemy[1]) :
-                        enemy = (elem.rect.x - self.rect.x, elem.rect.y - self.rect.y)
-                self.weapon.shoot(enemy)
-            # для теста
+                collid = []
+                for elem in objects:
+                    if -100 < elem.rect.x - self.rect.x < 100 and -100 < elem.rect.y - self.rect.y < 100:
+                        collid.append(elem)
+                if collid:
+                    collid[0].interact()
+                else:
+                    enemy = (10000, 100000)
+                    for elem in list(enemies):
+                        if abs(elem.rect.x - self.rect.x) + abs(elem.rect.y - self.rect.y) < abs(enemy[0]) + abs(enemy[1]) :
+                            enemy = (elem.rect.x - self.rect.x, elem.rect.y - self.rect.y)
+                    self.weapon.shoot(enemy)
             if event.key == 122:
-                Slime()
+                self.run_coeff = 2
+                self.speed_x *= 2
+                self.speed_y *= 2
         elif event.type == pygame.KEYUP:
             if 1073741903 <= event.key <= 1073741906:
                 self.speed_x = 0
                 self.speed_y = 0
-                self.cur_frame = 1
+                self.cur_frame = 0
+            if event.key == 122:
+                self.speed_x //= self.run_coeff
+                self.speed_y //= self.run_coeff
+                self.run_coeff = 1
         self.weapon.set_coords(self.rect.x + self.rect.width, self.rect.y + 20)
         if self.count >= FPS // ANIM_FPS:
             self.count = 0

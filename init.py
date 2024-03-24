@@ -13,6 +13,7 @@ characters = pygame.sprite.Group()
 enemies = pygame.sprite.Group()
 obstacles = pygame.sprite.Group()
 teleports = pygame.sprite.Group()
+objects = pygame.sprite.Group()
 
 
 def load_image(name):
@@ -29,6 +30,7 @@ underground_images = {'floor': [load_image('images/fields/underground/floor1.png
                                 load_image('images/fields/underground/floor4.png'),
                                 load_image('images/fields/underground/floor5.png')],
                        'wall': [load_image('images/fields/underground/wall1.png'),
-                                load_image('images/fields/underground/wall2.png')],
+                                load_image('images/fields/underground/wall2.png'),
+                                load_image('images/fields/underground/wall3.png')],
                        'door': [load_image('images/fields/underground/wall1.png')],
                        'door_open': [load_image('images/fields/underground/open_door.png')]}

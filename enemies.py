@@ -98,8 +98,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self, event):
         self.count += 1
-        if pygame.sprite.spritecollide(self, obstacles, dokill=False) or \
-                pygame.sprite.spritecollide(self, characters, dokill=False):
+        if pygame.sprite.spritecollide(self, obstacles, dokill=False):
             self.rect.x -= self.speed_x
             self.rect.y -= self.speed_y
         if self.state == 'dead':
